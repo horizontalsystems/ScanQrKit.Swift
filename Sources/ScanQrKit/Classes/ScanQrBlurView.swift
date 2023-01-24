@@ -3,10 +3,12 @@ import UIExtensions
 
 class ScanQrBlurView: CustomIntensityVisualEffectView {
     private let sideMargin: CGFloat
+    private let bottomInset: CGFloat
     private let maskLayer = CAShapeLayer()
 
-    init(sideMargin: CGFloat) {
+    init(sideMargin: CGFloat, bottomInset: CGFloat) {
         self.sideMargin = sideMargin
+        self.bottomInset = bottomInset
 
         super.init(effect: UIBlurEffect(style: .themeHud), intensity: 0.7)
     }
@@ -16,16 +18,20 @@ class ScanQrBlurView: CustomIntensityVisualEffectView {
     }
 
     func layoutBlurMask() {
-        let path = UIBezierPath (
+        let path = UIBezierPath(
                 roundedRect: bounds,
-                cornerRadius: 0)
+                cornerRadius: 0
+        )
 
-        let width = self.width - 2 * sideMargin
-        let vMargin = (self.height - width) / 2
+        let maskSize = width - sideMargin * 2
+        let bottomPadding = safeAreaInsets.bottom + bottomInset
+        let verticalContainerHeight = height - bottomPadding
+        let verticalMargin = (verticalContainerHeight - maskSize) / 2
 
-        let transparentRect = UIBezierPath (
-                roundedRect: bounds.inset(by: UIEdgeInsets(top: vMargin, left: sideMargin, bottom: vMargin, right: sideMargin)),
-                cornerRadius: .cornerRadius2x)
+        let transparentRect = UIBezierPath(
+                roundedRect: bounds.inset(by: UIEdgeInsets(top: verticalMargin, left: sideMargin, bottom: verticalMargin + bottomPadding, right: sideMargin)),
+                cornerRadius: .cornerRadius8
+        )
 
         path.append(transparentRect)
         path.usesEvenOddFillRule = true

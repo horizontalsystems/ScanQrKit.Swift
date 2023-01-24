@@ -4,7 +4,7 @@ import UIExtensions
 
 public class ScanQrView: UIView {
     private let scanQueue = DispatchQueue(label: "io.horizontalsystems.lightning.scan_view", qos: .default)
-    private static let sideMargin: CGFloat = CGFloat.margin24
+    private let sideMargin: CGFloat = .margin24
 
     public weak var delegate: IScanQrCodeDelegate?
 
@@ -12,7 +12,8 @@ public class ScanQrView: UIView {
     private var metadataOutput: AVCaptureMetadataOutput?
     private let previewLayer: AVCaptureVideoPreviewLayer
 
-    private let blurView = ScanQrBlurView(sideMargin: ScanQrView.sideMargin)
+    private let bottomInset: CGFloat
+    private let blurView: ScanQrBlurView
     private let alertView = ScanQrAlertView()
 
     private var initiallySetUp = false
@@ -23,9 +24,12 @@ public class ScanQrView: UIView {
         }
     }
 
-    public init() {
+    public init(bottomInset: CGFloat) {
         captureSession = AVCaptureSession()
         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+
+        self.bottomInset = bottomInset
+        blurView = ScanQrBlurView(sideMargin: sideMargin, bottomInset: bottomInset)
 
         super.init(frame: .zero)
 
@@ -39,12 +43,21 @@ public class ScanQrView: UIView {
             maker.edges.equalToSuperview()
         }
 
-        addSubview(alertView)
+        let alertWrapper = UIView()
+
+        addSubview(alertWrapper)
+        alertWrapper.snp.makeConstraints { maker in
+            maker.leading.top.trailing.equalToSuperview()
+            maker.bottom.equalTo(safeAreaLayoutGuide.snp.bottom).inset(bottomInset)
+        }
+
+        alertWrapper.addSubview(alertView)
         alertView.snp.makeConstraints { maker in
             maker.centerY.equalToSuperview()
-            maker.leading.trailing.equalToSuperview().inset(Self.sideMargin)
+            maker.leading.trailing.equalToSuperview().inset(sideMargin)
             maker.height.equalTo(alertView.snp.width)
         }
+
         alertView.isHidden = true
     }
 
@@ -91,11 +104,13 @@ public class ScanQrView: UIView {
             return
         }
 
-        let left = ScanQrView.sideMargin / width
-        let rectWidth = width - 2 * ScanQrView.sideMargin
-        let top = ((height - rectWidth) / 2) / height
+        let maskSize = width - sideMargin * 2
+        let bottomPadding = safeAreaInsets.bottom + bottomInset
+        let verticalContainerHeight = height - bottomPadding
+        let verticalMargin = (verticalContainerHeight - maskSize) / 2
 
-        metadataOutput?.rectOfInterest = CGRect(x: top, y: left, width: rectWidth / height, height: rectWidth / width)
+        let rect = CGRect(x: sideMargin, y: verticalMargin, width: maskSize, height: maskSize)
+        metadataOutput?.rectOfInterest = previewLayer.metadataOutputRectConverted(fromLayerRect: rect)
     }
 
     private func failed() {
